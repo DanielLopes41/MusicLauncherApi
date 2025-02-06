@@ -1,4 +1,4 @@
-import { Model, DataTypes } from "sequelize";
+import { Model, DataTypes } from 'sequelize'
 
 export default class User extends Model {
   static init(sequelize) {
@@ -10,24 +10,31 @@ export default class User extends Model {
           unique: true,
           validate: {
             isEmail: {
-              msg: "Email inválido",
+              msg: 'Email inválido',
             },
           },
         },
         password: {
-          type: DataTypes.STRING, 
+          type: DataTypes.STRING,
           allowNull: false,
           validate: {
             len: {
               args: [6, 50],
-              msg: "A senha deve ter entre 6 e 50 caracteres",
+              msg: 'A senha deve ter entre 6 e 50 caracteres',
             },
           },
         },
       },
       {
         sequelize,
-      }
-    );
+        tableName: 'users',
+        timestamps: true,
+      },
+    )
+    return this
+  }
+
+  static associate(models) {
+    this.hasMany(models.Music, { foreignKey: 'userId' })
   }
 }

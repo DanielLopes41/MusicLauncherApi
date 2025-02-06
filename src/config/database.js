@@ -1,4 +1,5 @@
-require('dotenv').config()
+import dotenv from "dotenv"
+dotenv.config()
 module.exports = {
   dialect: 'postgres',
   port: process.env.DATABASE_PORT,
@@ -6,15 +7,15 @@ module.exports = {
   host: process.env.DATABASE_HOST,
   password: process.env.DATABASE_PASSWORD,
   database: process.env.DATABASE,
-  define:{
+  define: {
     timestamps: true,
     underscored: true,
     underscoredAll: true,
-    'createdAt': 'created_at',
-    'updatedAt': 'updated_at',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
   },
-  dialectOptions:{
-    timezone: 'America/Sao_Paulo'
+  dialectOptions: {
+    timezone: 'America/Sao_Paulo',
   },
-  timezone: 'America/Sao_Paulo'
+  timezone: 'America/Sao_Paulo',
 }
