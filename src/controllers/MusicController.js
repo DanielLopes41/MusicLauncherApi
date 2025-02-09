@@ -7,7 +7,41 @@ export class MusicController {
   async download(req, res) {
     try {
       const { userId } = req.body
-      const tempFilePath = path.resolve(__dirname, 'temp-audio.mp3')
+      if (req.file) {
+        try {
+          cloudinary.uploader.upload_stream(
+            { resource_type: 'auto' },
+            async (error, result) => {
+              if (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Failed to upload to Cloudinary', details: error });
+              }
+              
+              await Music.create({
+                title: `music_${Math.floor(Math.random() * 1000000)}`,
+                fileUrl: result.secure_url,
+                cloudinaryUrl: result.secure_url, 
+                thumbnailUrl: 'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
+                userId,
+              });
+      
+              return res.status(200).json({
+                fileUrl: result.secure_url,
+                cloudinaryUrl: result.secure_url,
+                thumbnailUrl: 'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
+              });
+            }
+          ).end(req.file.buffer);
+        } catch (e) {
+          console.error(e);
+          return res.status(500).json({ error: 'Erro interno no servidor' });
+        }
+      }
+    
+      if (!req.body.url) {
+        throw new Error('The Url is required');
+      }
+      const tempFilePath = path.resolve(__dirname, '..' , 'temp')
       await ytdl(req.body.url, {
         filter: 'audioonly',
         quality: 'highestaudio',
@@ -81,9 +115,10 @@ export class MusicController {
 
   async syncWithUser(req, res) {
     try {
-      const { id: userId, musicId } = req.body
+      const userId = req.userId
+      const { musicId } = req.body
+      console.log(userId)
       const music = await Music.findByPk(musicId)
-
       if (!music) {
         return res.status(400).json({ errors: ['Música não existe'] })
       }

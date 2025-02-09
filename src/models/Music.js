@@ -43,7 +43,7 @@ export default class Music extends Model {
           type: DataTypes.INTEGER,
           allowNull: true,
           references: {
-            model: 'users',
+            model: 'users', 
             key: 'id',
           },
           onDelete: 'SET NULL',
