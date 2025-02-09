@@ -1,4 +1,5 @@
 import user from './src/routes/user'
+import token from './src/routes/token'
 import music from './src/routes/music'
 import express from 'express'
 import './src/database'
@@ -17,6 +18,7 @@ export class App {
   routes() {
     this.app.use('/users', user)
     this.app.use('/music', music)
+    this.app.use('/tokens', token)
   }
 }
 

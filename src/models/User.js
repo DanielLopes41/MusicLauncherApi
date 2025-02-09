@@ -1,5 +1,5 @@
 import { Model, DataTypes } from 'sequelize'
-
+import bcryptjs from 'bcryptjs'
 export default class User extends Model {
   static init(sequelize) {
     super.init(
@@ -14,9 +14,15 @@ export default class User extends Model {
             },
           },
         },
-        password: {
+        password_hash: {
           type: DataTypes.STRING,
           allowNull: false,
+          defaultValue: '',
+        },
+        password: {
+          type: DataTypes.VIRTUAL,
+          allowNull: false,
+          defaultValue: '',
           validate: {
             len: {
               args: [6, 50],
@@ -31,10 +37,19 @@ export default class User extends Model {
         timestamps: true,
       },
     )
+
+    this.addHook('beforeSave', async user => {
+      user.password_hash = await bcryptjs.hash(user.password, 8)
+    })
+
     return this
   }
 
   static associate(models) {
     this.hasMany(models.Music, { foreignKey: 'userId' })
+  }
+
+  passwordIsValid(password) {
+    return bcryptjs.compare(password, this.password_hash)
   }
 }

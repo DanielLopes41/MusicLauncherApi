@@ -1,5 +1,4 @@
-import dotenv from "dotenv"
-dotenv.config()
+require('dotenv').config()
 module.exports = {
   dialect: 'postgres',
   port: process.env.DATABASE_PORT,
