@@ -6,7 +6,7 @@ import path from 'path'
 export class MusicController {
   async download(req, res) {
     try {
-      const { userId } = req.body
+      const userId = req.userId
       if (req.file) {
         try {
           cloudinary.uploader.upload_stream(
@@ -32,6 +32,7 @@ export class MusicController {
               });
             }
           ).end(req.file.buffer);
+          return
         } catch (e) {
           console.error(e);
           return res.status(500).json({ error: 'Erro interno no servidor' });
@@ -117,7 +118,6 @@ export class MusicController {
     try {
       const userId = req.userId
       const { musicId } = req.body
-      console.log(userId)
       const music = await Music.findByPk(musicId)
       if (!music) {
         return res.status(400).json({ errors: ['Música não existe'] })
