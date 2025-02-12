@@ -46,7 +46,7 @@ export default class User extends Model {
   }
 
   static associate(models) {
-    this.hasMany(models.Music, { foreignKey: 'userId' })
+    this.belongsToMany(models.Music, { through: 'user_musics' })
   }
 
   passwordIsValid(password) {

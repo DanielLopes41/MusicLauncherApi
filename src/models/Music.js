@@ -56,6 +56,11 @@ export default class Music extends Model {
         tableName: 'musics',
         timestamps: true,
       },
+      
     )
+    return this
+  }
+  static associate(models) {
+    this.belongsToMany(models.User, { through: 'user_musics' })
   }
 }

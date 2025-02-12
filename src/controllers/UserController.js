@@ -4,7 +4,7 @@ export class UserController {
   async store(req, res) {
     try {
       const newUser = await User.create(req.body)
-      const { id,email  } = newUser
+      const { id,email } = newUser
       return res.json({ id,email })
     } catch (e) {
       console.error(e)
@@ -23,14 +23,14 @@ export class UserController {
         include: {
           model: Music,
         },
+        attributes: ['id', 'email'], 
       });
   
       if (!user) {
         return res.status(404).json({ error: 'Usuário não encontrado' })
       }
   
-      const { id, nome, email } = user      
-      return res.json({ id, nome, email })
+      return res.json(user)
     } catch (e) {
       console.error(e)
       return res.status(500).json({ error: 'Erro interno no servidor' })

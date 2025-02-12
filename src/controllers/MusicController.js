@@ -1,12 +1,15 @@
 import Music from '../models/Music'
+import User from '../models/User'
 import ytdl from '@distube/ytdl-core'
 import fs from 'fs'
 import cloudinary from '../config/cloudinary'
 import path from 'path'
+import User from '../models/User'
 export class MusicController {
   async download(req, res) {
     try {
-      const userId = req.userId
+      const user = await User.findByPk(req.userId)
+      const music = Music
       if (req.file) {
         try {
           cloudinary.uploader.upload_stream(
@@ -17,13 +20,12 @@ export class MusicController {
                 return res.status(500).json({ error: 'Failed to upload to Cloudinary', details: error });
               }
               
-              await Music.create({
+              await music.create({
                 title: `music_${Math.floor(Math.random() * 1000000)}`,
                 fileUrl: result.secure_url,
                 cloudinaryUrl: result.secure_url, 
                 thumbnailUrl: 'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
-                userId,
-              });
+              }).then((newMusic) => newMusic.addUser(user))
       
               return res.status(200).json({
                 fileUrl: result.secure_url,
@@ -59,12 +61,11 @@ export class MusicController {
             )
             await fs.promises.unlink(tempFilePath)
             const info = await ytdl.getInfo(req.body.url)
-            await Music.create({
+            await music.create({
               title: info.videoDetails.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/sddefault.jpg`,
               cloudinaryUrl: uploadResult.secure_url,
-              userId,
-            })
+            }).then((newMusic) => newMusic.addUser(user))
             return res.json({
               title: info.videoDetails.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/sddefault.jpg`,
@@ -89,7 +90,7 @@ export class MusicController {
 
   async index(req, res) {
     try {
-      const AllMusic = await Music.findAll({})
+      const AllMusic = await Music.findAll({ include: User })
       return res.json(AllMusic)
     } catch (e) {
       console.error(e)
@@ -98,15 +99,17 @@ export class MusicController {
   }
 
   async delete(req, res) {
+    const user = await User.findByPk(req.userId)
     try {
       const { id } = req.body
-      const music = await Music.findByPk(id)
-
+      const music = await Music.findByPk(id);
+      if (!user) {
+        return res.status(400).json({ errors: ['Usuário não existe'] })
+      }
       if (!music) {
         return res.status(400).json({ errors: ['Música não existe'] })
       }
-
-      await music.destroy()
+      await music.removeUser(user)
       return res.json({ message: 'Música deletada com sucesso' })
     } catch (e) {
       console.error(e)
@@ -116,14 +119,13 @@ export class MusicController {
 
   async syncWithUser(req, res) {
     try {
-      const userId = req.userId
+      const user = await User.findByPk(req.userId)
       const { musicId } = req.body
       const music = await Music.findByPk(musicId)
       if (!music) {
         return res.status(400).json({ errors: ['Música não existe'] })
       }
-
-      await music.update({ userId })
+      await music.addUser(user)
       return res.json(music)
     } catch (e) {
       console.error(e)
