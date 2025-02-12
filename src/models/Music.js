@@ -43,7 +43,7 @@ export default class Music extends Model {
           type: DataTypes.INTEGER,
           allowNull: true,
           references: {
-            model: 'users', 
+            model: 'users',
             key: 'id',
           },
           onDelete: 'SET NULL',
@@ -56,10 +56,10 @@ export default class Music extends Model {
         tableName: 'musics',
         timestamps: true,
       },
-      
     )
     return this
   }
+
   static associate(models) {
     this.belongsToMany(models.User, { through: 'user_musics' })
   }

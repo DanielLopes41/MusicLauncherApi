@@ -2,12 +2,12 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.addColumn('users', 'password_hash', {
-              type: Sequelize.STRING,
-              allowNull: false,
-              defaultValue: '',
-            });
+      type: Sequelize.STRING,
+      allowNull: false,
+      defaultValue: '',
+    })
 
-    await queryInterface.removeColumn('users', 'password');
+    await queryInterface.removeColumn('users', 'password')
   },
 
   down: async (queryInterface, Sequelize) => {
@@ -15,8 +15,8 @@ module.exports = {
       type: Sequelize.STRING,
       allowNull: false,
       defaultValue: '',
-    });
+    })
 
-    await queryInterface.removeColumn('users', 'password');
+    await queryInterface.removeColumn('users', 'password')
   },
-};
+}

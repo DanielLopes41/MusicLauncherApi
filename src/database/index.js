@@ -1,7 +1,7 @@
 import Sequelize from 'sequelize'
-import databaseConfig from '../config/database'
-import User from '../models/User'
-import Music from '../models/Music'
+import databaseConfig from '../config/database.js'
+import User from '../models/User.js'
+import Music from '../models/Music.js'
 const models = [User, Music]
 
 const connection = new Sequelize(databaseConfig)

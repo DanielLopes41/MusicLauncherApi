@@ -4,8 +4,8 @@ export class UserController {
   async store(req, res) {
     try {
       const newUser = await User.create(req.body)
-      const { id,email } = newUser
-      return res.json({ id,email })
+      const { id, email } = newUser
+      return res.json({ id, email })
     } catch (e) {
       console.error(e)
       if (e.errors) {
@@ -17,26 +17,26 @@ export class UserController {
       return res.status(500).json({ error: 'Erro interno no servidor' })
     }
   }
+
   async show(req, res) {
     try {
       const user = await User.findByPk(req.userId, {
         include: {
           model: Music,
         },
-        attributes: ['id', 'email'], 
-      });
-  
+        attributes: ['id', 'email'],
+      })
+
       if (!user) {
         return res.status(404).json({ error: 'Usuário não encontrado' })
       }
-  
+
       return res.json(user)
     } catch (e) {
       console.error(e)
       return res.status(500).json({ error: 'Erro interno no servidor' })
     }
   }
-  
 
   async delete(req, res) {
     try {
@@ -63,8 +63,8 @@ export class UserController {
       }
 
       await user.update(req.body)
-      const { id, nome, email } = user;
-      return res.json({ id, nome, email });
+      const { id, nome, email } = user
+      return res.json({ id, nome, email })
     } catch (e) {
       console.error(e)
       return res.status(500).json({ error: 'Erro interno no servidor' })

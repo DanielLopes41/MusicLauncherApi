@@ -2,9 +2,11 @@
   "name": "api-music-launcher",
   "version": "1.0.0",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon ./src/server.js localhost 3000"
+    "dev": "nodemon ./src/server.js localhost 3000",
+    "start": "node ./src/server.js"
   },
   "keywords": [],
   "author": "",
