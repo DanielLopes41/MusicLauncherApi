@@ -39,17 +39,6 @@ export default class Music extends Model {
           },
           field: 'cloudinaryUrl',
         },
-        userId: {
-          type: DataTypes.INTEGER,
-          allowNull: true,
-          references: {
-            model: 'users',
-            key: 'id',
-          },
-          onDelete: 'SET NULL',
-          onUpdate: 'CASCADE',
-          field: 'userId',
-        },
       },
       {
         sequelize,
