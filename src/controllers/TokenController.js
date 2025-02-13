@@ -35,7 +35,8 @@ export class TokenController {
       )
 
       return res.json({ token })
-    } catch (error) {
+    }catch (error) {
+      console.error(error.message) 
       return res.status(500).json({
         errors: ['Internal server error'],
       })
