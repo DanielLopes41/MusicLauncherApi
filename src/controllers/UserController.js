@@ -7,10 +7,9 @@ export class UserController {
       const { id, email } = newUser
       return res.json({ id, email })
     } catch (e) {
-      console.error(e)
       if (e.errors) {
         return res.status(400).json({
-          errors: e.errors.map((err) => err.message),
+          message: 'Já existe uma conta com esse e-mail. Faça login.',
         })
       }
 
