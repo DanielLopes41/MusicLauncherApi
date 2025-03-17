@@ -74,13 +74,13 @@ export class MusicController {
             await music
               .create({
                 title: info.videoDetails.title,
-                thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/sddefault.jpg`,
+                thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
                 cloudinaryUrl: uploadResult.secure_url,
               })
               .then((newMusic) => newMusic.addUser(user))
             return res.json({
               title: info.videoDetails.title,
-              thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/sddefault.jpg`,
+              thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
               cloudinaryUrl: uploadResult.secure_url,
             })
           } catch (e) {
