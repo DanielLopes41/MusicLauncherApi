@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename)
 
 export class MusicController {
   async download(req, res) {
+    console.log('a')
     try {
       const user = await User.findByPk(req.userId)
       const music = Music
