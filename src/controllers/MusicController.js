@@ -1,6 +1,6 @@
 import Music from '../models/Music.js'
 import User from '../models/User.js'
-import ytdlp from 'yt-dlp-exec'
+import playdl from 'play-dl'
 import fs from 'fs'
 import cloudinary from '../config/cloudinary.js'
 import path from 'path'
@@ -18,43 +18,41 @@ export class MusicController {
       if (!req.body.url) {
         throw new Error('The Url is required')
       }
-      const tempFilePath = path.resolve(__dirname, '..', 'temp')
-      await ytdlp(req.body.url, {
-        format: 'bestaudio',
-        output: 'audio.mp3',
+      const tempDir = path.resolve(__dirname, '..', 'temp')
+
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir)
+      }
+      const tempFilePath = path.resolve(tempDir, 'audio.mp3')
+      const stream = await playdl(req.body.url, {
+        quality: 1,
+        dl: true,
       })
-        .pipe(fs.createWriteStream(tempFilePath))
-        .on('finish', async () => {
-          try {
-            const uploadResult = await cloudinary.uploader.upload(
-              tempFilePath,
-              {
-                resource_type: 'auto',
-                public_id: `music_${Math.floor(Math.random() * 1000000)}`,
-              },
-            )
-            await fs.promises.unlink(tempFilePath)
-            const info = await ytdlp(req.body.url, {
-              dumpSingleJson: true,
-              noWarnings: true,
-            })
-            await music
-              .create({
-                title: info.title,
-                thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-                cloudinaryUrl: uploadResult.secure_url,
-              })
-              .then((newMusic) => newMusic.addUser(user))
-            return res.json({
+      stream.pipe(fs.createWriteStream(tempFilePath)).on('finish', async () => {
+        try {
+          const uploadResult = await cloudinary.uploader.upload(tempFilePath, {
+            resource_type: 'auto',
+            public_id: `music_${Math.floor(Math.random() * 1000000)}`,
+          })
+          await fs.promises.unlink(tempFilePath)
+          const info = await playdl.video_info(req.body.url)
+          await music
+            .create({
               title: info.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
               cloudinaryUrl: uploadResult.secure_url,
             })
-          } catch (e) {
-            console.error(e)
-            return res.status(500).json({ error: 'Erro interno no servidor' })
-          }
-        })
+            .then((newMusic) => newMusic.addUser(user))
+          return res.json({
+            title: info.title,
+            thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
+            cloudinaryUrl: uploadResult.secure_url,
+          })
+        } catch (e) {
+          console.error(e)
+          return res.status(500).json({ error: 'Erro interno no servidor' })
+        }
+      })
     } catch (e) {
       console.error(e)
       if (e.errors) {
