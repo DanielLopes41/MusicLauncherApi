@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename)
 export class MusicController {
   async download(req, res) {
     try {
+      const url = new URL(req.body.url)
       const user = await User.findByPk(req.userId)
       const music = Music
 
@@ -24,13 +25,10 @@ export class MusicController {
         fs.mkdirSync(tempDir)
       }
       const tempFilePath = path.resolve(tempDir, 'audio.mp3')
-      const audioStream = await playdl.stream(
-        'https://www.youtube.com/watch?v=7bsCU41ntKs',
-        {
-          quality: 1,
-          dl: true,
-        },
-      )
+      const audioStream = await playdl.stream(url, {
+        quality: 1,
+        dl: true,
+      })
       audioStream.stream
         .pipe(fs.createWriteStream(tempFilePath))
         .on('finish', async () => {
@@ -43,7 +41,7 @@ export class MusicController {
               },
             )
             await fs.promises.unlink(tempFilePath)
-            const info = await playdl.video_info(req.body.url)
+            const info = await playdl.video_info(url)
             await music
               .create({
                 title: info.title,
