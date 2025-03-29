@@ -24,7 +24,7 @@ export class MusicController {
         fs.mkdirSync(tempDir)
       }
       const tempFilePath = path.resolve(tempDir, 'audio.mp3')
-      const stream = await playdl(req.body.url, {
+      const stream = await playdl.stream(req.body.url, {
         quality: 1,
         dl: true,
       })
