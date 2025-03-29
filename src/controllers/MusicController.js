@@ -1,6 +1,6 @@
 import Music from '../models/Music.js'
 import User from '../models/User.js'
-import ytdl from '@distube/ytdl-core'
+import ytdlp from 'yt-dlp-exec'
 import fs from 'fs'
 import cloudinary from '../config/cloudinary.js'
 import path from 'path'
@@ -14,50 +14,14 @@ export class MusicController {
     try {
       const user = await User.findByPk(req.userId)
       const music = Music
-      if (req.file) {
-        try {
-          cloudinary.uploader
-            .upload_stream({ resource_type: 'auto' }, async (error, result) => {
-              if (error) {
-                console.error(error)
-                return res.status(500).json({
-                  error: 'Failed to upload to Cloudinary',
-                  details: error,
-                })
-              }
-
-              await music
-                .create({
-                  title: `music_${Math.floor(Math.random() * 1000000)}`,
-                  fileUrl: result.secure_url,
-                  cloudinaryUrl: result.secure_url,
-                  thumbnailUrl:
-                    'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
-                })
-                .then((newMusic) => newMusic.addUser(user))
-
-              return res.status(200).json({
-                fileUrl: result.secure_url,
-                cloudinaryUrl: result.secure_url,
-                thumbnailUrl:
-                  'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
-              })
-            })
-            .end(req.file.buffer)
-          return
-        } catch (e) {
-          console.error(e)
-          return res.status(500).json({ error: 'Erro interno no servidor' })
-        }
-      }
 
       if (!req.body.url) {
         throw new Error('The Url is required')
       }
       const tempFilePath = path.resolve(__dirname, '..', 'temp')
-      await ytdl(req.body.url, {
-        filter: 'audioonly',
-        quality: 'highestaudio',
+      await ytdlp(req.body.url, {
+        format: 'bestaudio',
+        output: 'audio.mp3',
       })
         .pipe(fs.createWriteStream(tempFilePath))
         .on('finish', async () => {
@@ -70,16 +34,19 @@ export class MusicController {
               },
             )
             await fs.promises.unlink(tempFilePath)
-            const info = await ytdl.getInfo(req.body.url)
+            const info = await ytdlp(req.body.url, {
+              dumpSingleJson: true,
+              noWarnings: true,
+            })
             await music
               .create({
-                title: info.videoDetails.title,
+                title: info.title,
                 thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
                 cloudinaryUrl: uploadResult.secure_url,
               })
               .then((newMusic) => newMusic.addUser(user))
             return res.json({
-              title: info.videoDetails.title,
+              title: info.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
               cloudinaryUrl: uploadResult.secure_url,
             })
