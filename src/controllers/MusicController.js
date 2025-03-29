@@ -24,35 +24,40 @@ export class MusicController {
         fs.mkdirSync(tempDir)
       }
       const tempFilePath = path.resolve(tempDir, 'audio.mp3')
-      const stream = await playdl.stream(req.body.url, {
+      const audioStream = await playdl.stream(req.body.url, {
         quality: 1,
         dl: true,
       })
-      stream.pipe(fs.createWriteStream(tempFilePath)).on('finish', async () => {
-        try {
-          const uploadResult = await cloudinary.uploader.upload(tempFilePath, {
-            resource_type: 'auto',
-            public_id: `music_${Math.floor(Math.random() * 1000000)}`,
-          })
-          await fs.promises.unlink(tempFilePath)
-          const info = await playdl.video_info(req.body.url)
-          await music
-            .create({
+      audioStream.stream
+        .pipe(fs.createWriteStream(tempFilePath))
+        .on('finish', async () => {
+          try {
+            const uploadResult = await cloudinary.uploader.upload(
+              tempFilePath,
+              {
+                resource_type: 'auto',
+                public_id: `music_${Math.floor(Math.random() * 1000000)}`,
+              },
+            )
+            await fs.promises.unlink(tempFilePath)
+            const info = await playdl.video_info(req.body.url)
+            await music
+              .create({
+                title: info.title,
+                thumbnailUrl: `https://img.youtube.com/vi/${info.video_details.id}/maxresdefault.jpg`,
+                cloudinaryUrl: uploadResult.secure_url,
+              })
+              .then((newMusic) => newMusic.addUser(user))
+            return res.json({
               title: info.title,
-              thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
+              thumbnailUrl: `https://img.youtube.com/vi/${info.video_details.id}/maxresdefault.jpg`,
               cloudinaryUrl: uploadResult.secure_url,
             })
-            .then((newMusic) => newMusic.addUser(user))
-          return res.json({
-            title: info.title,
-            thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-            cloudinaryUrl: uploadResult.secure_url,
-          })
-        } catch (e) {
-          console.error(e)
-          return res.status(500).json({ error: 'Erro interno no servidor' })
-        }
-      })
+          } catch (e) {
+            console.error(e)
+            return res.status(500).json({ error: 'Erro interno no servidor' })
+          }
+        })
     } catch (e) {
       console.error(e)
       if (e.errors) {
