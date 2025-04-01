@@ -14,43 +14,9 @@ export class MusicController {
     try {
       const user = await User.findByPk(req.userId)
       const music = Music
-      if (req.file) {
-        try {
-          cloudinary.uploader
-            .upload_stream({ resource_type: 'auto' }, async (error, result) => {
-              if (error) {
-                console.error(error)
-                return res.status(500).json({
-                  error: 'Failed to upload to Cloudinary',
-                  details: error,
-                })
-              }
-
-              await music
-                .create({
-                  title: `music_${Math.floor(Math.random() * 1000000)}`,
-                  fileUrl: result.secure_url,
-                  cloudinaryUrl: result.secure_url,
-                  thumbnailUrl:
-                    'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
-                })
-                .then((newMusic) => newMusic.addUser(user))
-
-              return res.status(200).json({
-                fileUrl: result.secure_url,
-                cloudinaryUrl: result.secure_url,
-                thumbnailUrl:
-                  'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
-              })
-            })
-            .end(req.file.buffer)
-          return
-        } catch (e) {
-          console.error(e)
-          return res.status(500).json({ error: 'Erro interno no servidor' })
-        }
+      if (!user) {
+        throw new Error('BAD REQUEST')
       }
-
       if (!req.body.url) {
         throw new Error('The Url is required')
       }
