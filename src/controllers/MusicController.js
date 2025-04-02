@@ -1,76 +1,59 @@
 import Music from '../models/Music.js'
 import User from '../models/User.js'
 import ytdl from '@distube/ytdl-core'
+import fs from 'fs'
 import cloudinary from '../config/cloudinary.js'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export class MusicController {
   async download(req, res) {
     try {
       const user = await User.findByPk(req.userId)
       const music = Music
-
       if (!user) {
         throw new Error('BAD REQUEST')
       }
-
       if (!req.body.url) {
         throw new Error('The Url is required')
       }
-
-      // Baixar o áudio do YouTube e enviar diretamente para o Cloudinary
-      const audioStream = ytdl(req.body.url, {
+      const tempFilePath = path.resolve(__dirname, '..', 'temp.mp4')
+      ytdl(req.body.url, {
         filter: 'audioonly',
         quality: 'highestaudio',
-        playerClients: ['WEB'],
       })
-
-      // Fazer o upload diretamente para o Cloudinary
-      const uploadResult = await cloudinary.uploader.upload_stream(
-        {
-          resource_type: 'audio',
-          public_id: `music_${Math.floor(Math.random() * 1000000)}`,
-        },
-        async (error, result) => {
-          if (error) {
-            console.error('Erro no upload:', error)
-            return res
-              .status(500)
-              .json({ error: 'Erro ao fazer upload para o Cloudinary' })
-          }
-
+        .pipe(fs.createWriteStream(tempFilePath))
+        .on('finish', async () => {
           try {
-            // Obter informações do vídeo
-            const info = await ytdl.getInfo(req.body.url, {
-              playerClients: ['WEB'],
-            })
-
-            // Criar uma nova música no banco de dados
-            const newMusic = await music.create({
-              title: info.videoDetails.title,
-              thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-              cloudinaryUrl: result.secure_url,
-            })
-
-            // Associar a música ao usuário
-            await newMusic.addUser(user)
-
-            // Retornar a resposta com os dados da música
+            const uploadResult = await cloudinary.uploader.upload(
+              tempFilePath,
+              {
+                resource_type: 'auto',
+                public_id: `music_${Math.floor(Math.random() * 1000000)}`,
+              },
+            )
+            await fs.promises.unlink(tempFilePath)
+            const info = await ytdl.getInfo(req.body.url)
+            await music
+              .create({
+                title: info.videoDetails.title,
+                thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
+                cloudinaryUrl: uploadResult.secure_url,
+              })
+              .then((newMusic) => newMusic.addUser(user))
             return res.json({
               title: info.videoDetails.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-              cloudinaryUrl: result.secure_url,
+              cloudinaryUrl: uploadResult.secure_url,
             })
           } catch (e) {
             console.error(e)
-            return res
-              .status(500)
-              .json({ error: 'Erro ao processar o arquivo.' })
+            return res.status(500).json({ error: 'Erro interno no servidor' })
           }
-        },
-      )
-
-      // Passar o stream de áudio para o Cloudinary
-      audioStream.pipe(uploadResult)
+        })
     } catch (e) {
       console.error(e)
       if (e.errors) {
@@ -78,6 +61,7 @@ export class MusicController {
           errors: e.errors.map((err) => err.message),
         })
       }
+
       return res.status(500).json({ error: 'Erro interno no servidor' })
     }
   }
