@@ -24,6 +24,7 @@ export class MusicController {
       await ytdl(req.body.url, {
         filter: 'audioonly',
         quality: 'highestaudio',
+        playerClients: ['WEB'],
       })
         .pipe(fs.createWriteStream(tempFilePath))
         .on('finish', async () => {
@@ -36,7 +37,9 @@ export class MusicController {
               },
             )
             await fs.promises.unlink(tempFilePath)
-            const info = await ytdl.getInfo(req.body.url)
+            const info = await ytdl.getInfo(req.body.url, {
+              playerClients: ['WEB'],
+            })
             await music
               .create({
                 title: info.videoDetails.title,
