@@ -14,21 +14,27 @@ export class MusicController {
     try {
       const user = await User.findByPk(req.userId)
       const music = Music
+
       if (!user) {
         throw new Error('BAD REQUEST')
       }
+
       if (!req.body.url) {
         throw new Error('The Url is required')
       }
-      const tempFilePath = path.resolve(__dirname, '..', 'temp')
+
+      const tempFilePath = path.resolve(__dirname, '..', 'temp', 'tempfile.mp3')
+
+      // Baixar o áudio do YouTube
       await ytdl(req.body.url, {
         filter: 'audioonly',
         quality: 'highestaudio',
         playerClients: ['WEB'],
       })
-        .pipe(fs.createWriteStream(tempFilePath))
+        .pipe(fs.createWriteStream(tempFilePath)) // Salvar no arquivo temporário
         .on('finish', async () => {
           try {
+            // Upload para o Cloudinary
             const uploadResult = await cloudinary.uploader.upload(
               tempFilePath,
               {
@@ -36,17 +42,26 @@ export class MusicController {
                 public_id: `music_${Math.floor(Math.random() * 1000000)}`,
               },
             )
+
+            // Remover o arquivo temporário após o upload
             await fs.promises.unlink(tempFilePath)
+
+            // Obter informações do vídeo
             const info = await ytdl.getInfo(req.body.url, {
               playerClients: ['WEB'],
             })
-            await music
-              .create({
-                title: info.videoDetails.title,
-                thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-                cloudinaryUrl: uploadResult.secure_url,
-              })
-              .then((newMusic) => newMusic.addUser(user))
+
+            // Criar uma nova música no banco de dados
+            const newMusic = await music.create({
+              title: info.videoDetails.title,
+              thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
+              cloudinaryUrl: uploadResult.secure_url,
+            })
+
+            // Associar a música ao usuário
+            await newMusic.addUser(user)
+
+            // Retornar a resposta com os dados da música
             return res.json({
               title: info.videoDetails.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
@@ -57,6 +72,10 @@ export class MusicController {
             return res.status(500).json({ error: 'Erro interno no servidor' })
           }
         })
+        .on('error', (err) => {
+          console.error('Erro ao salvar o arquivo:', err)
+          return res.status(500).json({ error: 'Erro ao processar o arquivo.' })
+        })
     } catch (e) {
       console.error(e)
       if (e.errors) {
@@ -64,7 +83,6 @@ export class MusicController {
           errors: e.errors.map((err) => err.message),
         })
       }
-
       return res.status(500).json({ error: 'Erro interno no servidor' })
     }
   }
