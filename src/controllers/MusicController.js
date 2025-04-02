@@ -22,7 +22,6 @@ export class MusicController {
       }
       const tempFilePath = path.resolve(__dirname, '..', 'temp.mp4')
       ytdl(req.body.url, {
-        filter: 'audioonly',
         quality: 'highestaudio',
       })
         .pipe(fs.createWriteStream(tempFilePath))
