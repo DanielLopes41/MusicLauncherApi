@@ -23,7 +23,7 @@ export class MusicController {
         throw new Error('The Url is required')
       }
 
-      const tempFilePath = path.resolve(__dirname, '..', 'temp', 'tempfile.mp3')
+      const tempFilePath = path.resolve(__dirname, '..', 'temp')
 
       // Baixar o áudio do YouTube
       await ytdl(req.body.url, {
