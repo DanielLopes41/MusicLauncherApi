@@ -5,13 +5,23 @@ import fs from 'fs'
 import cloudinary from '../config/cloudinary.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
-
+import dotenv from 'dotenv'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+dotenv.config()
 export class MusicController {
   async download(req, res) {
     try {
+      const rawCookies = process.env.YOUTUBE_COOKIES
+
+      if (!rawCookies) {
+        throw new Error('Cookies do YouTube não encontrados no .env')
+      }
+
+      const cookies = JSON.parse(rawCookies)
+      const agent = ytdl.createAgent(cookies)
+
       const user = await User.findByPk(req.userId)
       const music = Music
       if (!user) {
@@ -24,11 +34,7 @@ export class MusicController {
       ytdl(req.body.url, {
         filter: 'audioandvideo',
         quality: 'highest',
-        requestOptions: {
-          headers: {
-            cookie: process.env.YT_COOKIE,
-          },
-        },
+        agent,
       })
         .pipe(fs.createWriteStream(tempFilePath))
         .on('finish', async () => {
