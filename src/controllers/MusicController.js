@@ -24,6 +24,11 @@ export class MusicController {
       ytdl(req.body.url, {
         filter: 'audioandvideo',
         quality: 'highest',
+        requestOptions: {
+          headers: {
+            cookie: process.env.YT_COOKIE,
+          },
+        },
       })
         .pipe(fs.createWriteStream(tempFilePath))
         .on('finish', async () => {
