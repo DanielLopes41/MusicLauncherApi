@@ -60,7 +60,7 @@ export class MusicController {
                 cloudinaryUrl: uploadResult.secure_url,
               })
               .then((newMusic) => newMusic.addUser(user))
-            return res.json({
+            return res.status(201).json({
               title: info.videoDetails.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
               cloudinaryUrl: uploadResult.secure_url,
