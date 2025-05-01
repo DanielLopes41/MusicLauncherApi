@@ -13,7 +13,7 @@ export class MusicController {
   async download(req, res) {
     try {
       const user = await User.findByPk(req.userId)
-      const music = Music
+
       if (req.file) {
         try {
           cloudinary.uploader
@@ -26,15 +26,14 @@ export class MusicController {
                 })
               }
 
-              await music
-                .create({
-                  title: `music_${Math.floor(Math.random() * 1000000)}`,
-                  fileUrl: result.secure_url,
-                  cloudinaryUrl: result.secure_url,
-                  thumbnailUrl:
-                    'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
-                })
-                .then((newMusic) => newMusic.addUser(user))
+              const newMusic = await Music.create({
+                title: `music_${Math.floor(Math.random() * 1000000)}`,
+                fileUrl: result.secure_url,
+                cloudinaryUrl: result.secure_url,
+                thumbnailUrl:
+                  'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
+              })
+              await newMusic.addUser(user)
 
               return res.status(200).json({
                 fileUrl: result.secure_url,
@@ -44,7 +43,7 @@ export class MusicController {
               })
             })
             .end(req.file.buffer)
-          return
+          return // impede que o fluxo continue após o upload
         } catch (e) {
           console.error(e)
           return res.status(500).json({ error: 'Erro interno no servidor' })
@@ -52,14 +51,30 @@ export class MusicController {
       }
 
       if (!req.body.url) {
-        throw new Error('The Url is required')
+        return res.status(400).json({ error: 'The Url is required' })
       }
-      const tempFilePath = path.resolve(__dirname, '..', 'temp')
-      await ytdl(req.body.url, {
+
+      const cleanUrl = req.body.url.split('&')[0] // remove parâmetros extras
+      const tempFilePath = path.resolve(
+        __dirname,
+        '..',
+        'temp',
+        `music_${Date.now()}.mp3`,
+      )
+      const writeStream = fs.createWriteStream(tempFilePath)
+
+      writeStream.on('error', (err) => {
+        console.error('Erro ao escrever arquivo temporário:', err)
+        return res
+          .status(500)
+          .json({ error: 'Erro ao salvar áudio temporariamente' })
+      })
+
+      ytdl(cleanUrl, {
         filter: 'audioonly',
         quality: 'highestaudio',
       })
-        .pipe(fs.createWriteStream(tempFilePath))
+        .pipe(writeStream)
         .on('finish', async () => {
           try {
             const uploadResult = await cloudinary.uploader.upload(
@@ -69,15 +84,17 @@ export class MusicController {
                 public_id: `music_${Math.floor(Math.random() * 1000000)}`,
               },
             )
+
             await fs.promises.unlink(tempFilePath)
-            const info = await ytdl.getInfo(req.body.url)
-            await music
-              .create({
-                title: info.videoDetails.title,
-                thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-                cloudinaryUrl: uploadResult.secure_url,
-              })
-              .then((newMusic) => newMusic.addUser(user))
+
+            const info = await ytdl.getInfo(cleanUrl)
+            const newMusic = await Music.create({
+              title: info.videoDetails.title,
+              thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
+              cloudinaryUrl: uploadResult.secure_url,
+            })
+            await newMusic.addUser(user)
+
             return res.json({
               title: info.videoDetails.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
@@ -95,7 +112,6 @@ export class MusicController {
           errors: e.errors.map((err) => err.message),
         })
       }
-
       return res.status(500).json({ error: 'Erro interno no servidor' })
     }
   }
