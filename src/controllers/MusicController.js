@@ -1,13 +1,8 @@
 import Music from '../models/Music.js'
 import User from '../models/User.js'
 import ytdl from '@distube/ytdl-core'
-import fs from 'fs'
 import cloudinary from '../config/cloudinary.js'
-import path from 'path'
-import { fileURLToPath } from 'url'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 const streamToBuffer = (stream) => {
   return new Promise((resolve, reject) => {
     const chunks = []
