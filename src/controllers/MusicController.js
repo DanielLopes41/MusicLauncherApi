@@ -8,110 +8,95 @@ import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
+const streamToBuffer = (stream) => {
+  return new Promise((resolve, reject) => {
+    const chunks = []
+    stream.on('data', (chunk) => chunks.push(chunk))
+    stream.on('end', () => resolve(Buffer.concat(chunks)))
+    stream.on('error', reject)
+  })
+}
 export class MusicController {
   async download(req, res) {
     try {
       const user = await User.findByPk(req.userId)
 
+      // Upload de arquivo enviado (req.file)
       if (req.file) {
-        try {
-          cloudinary.uploader
-            .upload_stream({ resource_type: 'auto' }, async (error, result) => {
-              if (error) {
-                console.error(error)
-                return res.status(500).json({
-                  error: 'Failed to upload to Cloudinary',
-                  details: error,
-                })
-              }
-
-              const newMusic = await Music.create({
-                title: `music_${Math.floor(Math.random() * 1000000)}`,
-                fileUrl: result.secure_url,
-                cloudinaryUrl: result.secure_url,
-                thumbnailUrl:
-                  'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
+        cloudinary.uploader
+          .upload_stream({ resource_type: 'auto' }, async (error, result) => {
+            if (error) {
+              console.error(error)
+              return res.status(500).json({
+                error: 'Failed to upload to Cloudinary',
+                details: error,
               })
-              await newMusic.addUser(user)
+            }
 
-              return res.status(200).json({
-                fileUrl: result.secure_url,
-                cloudinaryUrl: result.secure_url,
-                thumbnailUrl:
-                  'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
-              })
+            const newMusic = await Music.create({
+              title: `music_${Math.floor(Math.random() * 1000000)}`,
+              fileUrl: result.secure_url,
+              cloudinaryUrl: result.secure_url,
+              thumbnailUrl:
+                'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
             })
-            .end(req.file.buffer)
-          return // impede que o fluxo continue após o upload
-        } catch (e) {
-          console.error(e)
-          return res.status(500).json({ error: 'Erro interno no servidor' })
-        }
+            await newMusic.addUser(user)
+
+            return res.status(200).json({
+              fileUrl: result.secure_url,
+              cloudinaryUrl: result.secure_url,
+              thumbnailUrl:
+                'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
+            })
+          })
+          .end(req.file.buffer)
+        return
       }
 
+      // Upload direto do YouTube
       if (!req.body.url) {
         return res.status(400).json({ error: 'The Url is required' })
       }
 
-      const cleanUrl = req.body.url.split('&')[0] // remove parâmetros extras
-      const tempFilePath = path.resolve(
-        __dirname,
-        '..',
-        'temp',
-        `music_${Date.now()}.mp3`,
-      )
-      const writeStream = fs.createWriteStream(tempFilePath)
-
-      writeStream.on('error', (err) => {
-        console.error('Erro ao escrever arquivo temporário:', err)
-        return res
-          .status(500)
-          .json({ error: 'Erro ao salvar áudio temporariamente' })
-      })
-
-      ytdl(cleanUrl, {
+      const cleanUrl = req.body.url.split('&')[0]
+      const info = await ytdl.getInfo(cleanUrl)
+      const stream = ytdl(cleanUrl, {
         filter: 'audioonly',
         quality: 'highestaudio',
       })
-        .pipe(writeStream)
-        .on('finish', async () => {
-          try {
-            const uploadResult = await cloudinary.uploader.upload(
-              tempFilePath,
-              {
-                resource_type: 'auto',
-                public_id: `music_${Math.floor(Math.random() * 1000000)}`,
-              },
-            )
 
-            await fs.promises.unlink(tempFilePath)
+      cloudinary.uploader
+        .upload_stream(
+          {
+            resource_type: 'video',
+            public_id: `music_${Math.floor(Math.random() * 1000000)}`,
+          },
+          async (error, result) => {
+            if (error) {
+              console.error(error)
+              return res.status(500).json({
+                error: 'Erro ao fazer upload no Cloudinary',
+                details: error,
+              })
+            }
 
-            const info = await ytdl.getInfo(cleanUrl)
             const newMusic = await Music.create({
               title: info.videoDetails.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-              cloudinaryUrl: uploadResult.secure_url,
+              cloudinaryUrl: result.secure_url,
             })
             await newMusic.addUser(user)
 
-            return res.json({
+            return res.status(200).json({
               title: info.videoDetails.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-              cloudinaryUrl: uploadResult.secure_url,
+              cloudinaryUrl: result.secure_url,
             })
-          } catch (e) {
-            console.error(e)
-            return res.status(500).json({ error: 'Erro interno no servidor' })
-          }
-        })
+          },
+        )
+        .end(await streamToBuffer(stream))
     } catch (e) {
       console.error(e)
-      if (e.errors) {
-        return res.status(400).json({
-          errors: e.errors.map((err) => err.message),
-        })
-      }
       return res.status(500).json({ error: 'Erro interno no servidor' })
     }
   }
