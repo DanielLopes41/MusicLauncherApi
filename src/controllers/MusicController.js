@@ -5,41 +5,59 @@ import fs from 'fs'
 import cloudinary from '../config/cloudinary.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import dotenv from 'dotenv'
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-dotenv.config()
 export class MusicController {
   async download(req, res) {
     try {
-      const rawCookies = process.env.YOUTUBE_COOKIES
-
-      if (!rawCookies) {
-        throw new Error('Cookies do YouTube não encontrados no .env')
-      }
-
-      const cookies = JSON.parse(rawCookies)
-      const agent = ytdl.createAgent(cookies, {
-        headers: {
-          'user-agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-        },
-      })
-
       const user = await User.findByPk(req.userId)
       const music = Music
-      if (!user) {
-        throw new Error('BAD REQUEST')
+      if (req.file) {
+        try {
+          cloudinary.uploader
+            .upload_stream({ resource_type: 'auto' }, async (error, result) => {
+              if (error) {
+                console.error(error)
+                return res.status(500).json({
+                  error: 'Failed to upload to Cloudinary',
+                  details: error,
+                })
+              }
+
+              await music
+                .create({
+                  title: `music_${Math.floor(Math.random() * 1000000)}`,
+                  fileUrl: result.secure_url,
+                  cloudinaryUrl: result.secure_url,
+                  thumbnailUrl:
+                    'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
+                })
+                .then((newMusic) => newMusic.addUser(user))
+
+              return res.status(200).json({
+                fileUrl: result.secure_url,
+                cloudinaryUrl: result.secure_url,
+                thumbnailUrl:
+                  'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
+              })
+            })
+            .end(req.file.buffer)
+          return
+        } catch (e) {
+          console.error(e)
+          return res.status(500).json({ error: 'Erro interno no servidor' })
+        }
       }
+
       if (!req.body.url) {
         throw new Error('The Url is required')
       }
-      const tempFilePath = path.resolve(__dirname, '..', 'temp.mp4')
-      ytdl(req.body.url, {
-        filter: 'audioandvideo',
-        quality: 'highest',
-        agent,
+      const tempFilePath = path.resolve(__dirname, '..', 'temp')
+      await ytdl(req.body.url, {
+        filter: 'audioonly',
+        quality: 'highestaudio',
       })
         .pipe(fs.createWriteStream(tempFilePath))
         .on('finish', async () => {
@@ -60,7 +78,7 @@ export class MusicController {
                 cloudinaryUrl: uploadResult.secure_url,
               })
               .then((newMusic) => newMusic.addUser(user))
-            return res.status(201).json({
+            return res.json({
               title: info.videoDetails.title,
               thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
               cloudinaryUrl: uploadResult.secure_url,
