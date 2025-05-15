@@ -1,18 +1,15 @@
 import Music from '../models/Music.js'
 import User from '../models/User.js'
-import cloudinary from '../config/cloudinary.js'
 import axios from 'axios'
 
 export class MusicController {
   async download(req, res) {
     try {
-      // Caso TikTok
       if (req.body.url) {
         const { data } = await axios.get('https://api.tikcdn.io/api/download', {
           params: { url: req.body.url },
         })
 
-        // Se não tiver o link de download, retorna erro
         if (!data || !data.downloadUrl) {
           return res
             .status(500)
@@ -27,45 +24,9 @@ export class MusicController {
         })
       }
 
-      // Caso upload de arquivo
-      if (req.file) {
-        const user = await User.findByPk(req.userId)
-
-        cloudinary.uploader
-          .upload_stream({ resource_type: 'auto' }, async (error, result) => {
-            if (error) {
-              console.error(error)
-              return res.status(500).json({
-                error: 'Falha ao enviar para o Cloudinary',
-                details: error,
-              })
-            }
-
-            const newMusic = await Music.create({
-              title: `music_${Math.floor(Math.random() * 1000000)}`,
-              fileUrl: result.secure_url,
-              cloudinaryUrl: result.secure_url,
-              thumbnailUrl:
-                'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
-            })
-
-            await newMusic.addUser(user)
-
-            return res.status(200).json({
-              fileUrl: result.secure_url,
-              cloudinaryUrl: result.secure_url,
-              thumbnailUrl:
-                'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
-            })
-          })
-          .end(req.file.buffer)
-
-        return
-      }
-
       return res.status(400).json({ error: 'URL ou arquivo não fornecido' })
     } catch (e) {
-      console.error(e)
+      console.log(e)
       return res.status(500).json({ error: 'Erro interno no servidor' })
     }
   }
