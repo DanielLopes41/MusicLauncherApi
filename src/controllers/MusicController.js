@@ -1,16 +1,8 @@
 import Music from '../models/Music.js'
 import User from '../models/User.js'
-import ytdl from '@distube/ytdl-core'
 import cloudinary from '../config/cloudinary.js'
 import axios from 'axios'
-const streamToBuffer = (stream) => {
-  return new Promise((resolve, reject) => {
-    const chunks = []
-    stream.on('data', (chunk) => chunks.push(chunk))
-    stream.on('end', () => resolve(Buffer.concat(chunks)))
-    stream.on('error', reject)
-  })
-}
+
 export class MusicController {
   async download(req, res) {
     try {
@@ -57,51 +49,7 @@ export class MusicController {
             })
           })
           .end(req.file.buffer)
-        return
       }
-
-      // Upload direto do YouTube
-      if (!req.body.url) {
-        return res.status(400).json({ error: 'The Url is required' })
-      }
-
-      const cleanUrl = req.body.url.split('&')[0]
-      const info = await ytdl.getInfo(cleanUrl)
-      const stream = ytdl(cleanUrl, {
-        filter: 'audioonly',
-        quality: 'highestaudio',
-      })
-
-      cloudinary.uploader
-        .upload_stream(
-          {
-            resource_type: 'video',
-            public_id: `music_${Math.floor(Math.random() * 1000000)}`,
-          },
-          async (error, result) => {
-            if (error) {
-              console.error(error)
-              return res.status(500).json({
-                error: 'Erro ao fazer upload no Cloudinary',
-                details: error,
-              })
-            }
-
-            const newMusic = await Music.create({
-              title: info.videoDetails.title,
-              thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-              cloudinaryUrl: result.secure_url,
-            })
-            await newMusic.addUser(user)
-
-            return res.status(200).json({
-              title: info.videoDetails.title,
-              thumbnailUrl: `https://img.youtube.com/vi/${info.videoDetails.videoId}/maxresdefault.jpg`,
-              cloudinaryUrl: result.secure_url,
-            })
-          },
-        )
-        .end(await streamToBuffer(stream))
     } catch (e) {
       console.error(e)
       return res.status(500).json({ error: 'Erro interno no servidor' })
