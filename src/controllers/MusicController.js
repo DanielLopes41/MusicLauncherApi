@@ -15,9 +15,10 @@ export class MusicController {
   async download(req, res) {
     try {
       if (req.body.url) {
-        const { data } = await axios.get(`https://api.tikcdn.io/api/download`, {
+        const { data } = await axios.get('https://api.tikcdn.io/api/download', {
           params: { url: req.body.url },
         })
+
         return res.status(200).send({
           fileUrl: '',
           cloudinaryUrl: data.downloadUrl,
