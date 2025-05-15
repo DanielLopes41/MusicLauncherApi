@@ -148,7 +148,11 @@ export class MusicController {
       return res.json(music)
     } catch (e) {
       console.error(e)
-      return res.status(500).json({ error: 'Erro interno no servidor' })
+      return res.status(500).json({
+        error: 'Erro interno no servidor',
+        message: e.message,
+        details: e.response?.data || null,
+      })
     }
   }
 }
