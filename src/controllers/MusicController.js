@@ -9,6 +9,9 @@ export class MusicController {
     if (url) {
       const response = await axios.get('https://www.tikwm.com/api/', {
         params: { url },
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+        },
       })
 
       const videoUrl = response?.data?.data?.play
