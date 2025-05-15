@@ -2,7 +2,7 @@ import Music from '../models/Music.js'
 import User from '../models/User.js'
 import ytdl from '@distube/ytdl-core'
 import cloudinary from '../config/cloudinary.js'
-
+import fetch from 'node-fetch'
 const streamToBuffer = (stream) => {
   return new Promise((resolve, reject) => {
     const chunks = []
@@ -14,6 +14,17 @@ const streamToBuffer = (stream) => {
 export class MusicController {
   async download(req, res) {
     try {
+      if (req.url) {
+        const response = await fetch(
+          `https://api.tikcdn.io/api/download?url=${encodeURIComponent(req.url)}`,
+        )
+        res.status(200).json({
+          fileUrl: '',
+          cloudinaryUrl: response,
+          thumbnailUrl:
+            'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
+        })
+      }
       const user = await User.findByPk(req.userId)
 
       // Upload de arquivo enviado (req.file)
