@@ -14,7 +14,7 @@ const streamToBuffer = (stream) => {
 export class MusicController {
   async download(req, res) {
     try {
-      if (req.url) {
+      if (req.body.url) {
         const { data } = await axios.get(`https://api.tikcdn.io/api/download`, {
           params: { url: req.body.url },
         })
