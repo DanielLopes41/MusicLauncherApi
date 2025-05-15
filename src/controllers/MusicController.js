@@ -1,16 +1,22 @@
 import Music from '../models/Music.js'
 import User from '../models/User.js'
+import cloudinary from '../config/cloudinary.js'
 import axios from 'axios'
 
 export class MusicController {
   async download(req, res) {
     try {
-      if (req.body.url) {
-        const { data } = await axios.get('https://api.tikcdn.io/api/download', {
-          params: { url: req.body.url },
+      const { url } = req.body
+
+      if (url) {
+        const response = await axios.get('https://www.tikwm.com/api/', {
+          params: { url },
         })
 
-        if (!data || !data.downloadUrl) {
+        const videoUrl = response?.data?.data?.play
+
+        // Verificação correta da estrutura do response
+        if (!videoUrl) {
           return res
             .status(500)
             .json({ error: 'Não foi possível obter o vídeo do TikTok' })
@@ -18,15 +24,51 @@ export class MusicController {
 
         return res.status(200).send({
           fileUrl: '',
-          cloudinaryUrl: data.downloadUrl,
+          cloudinaryUrl: videoUrl,
           thumbnailUrl:
-            'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
+            'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612',
         })
+      } else if (req.file) {
+        const user = await User.findByPk(req.userId)
+
+        cloudinary.uploader
+          .upload_stream({ resource_type: 'auto' }, async (error, result) => {
+            if (error) {
+              console.error(error)
+              return res.status(500).json({
+                error: 'Falha ao enviar para o Cloudinary',
+                details: error,
+              })
+            }
+
+            const newMusic = await Music.create({
+              title: `music_${Math.floor(Math.random() * 1000000)}`,
+              fileUrl: result.secure_url,
+              cloudinaryUrl: result.secure_url,
+              thumbnailUrl:
+                'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612',
+            })
+
+            await newMusic.addUser(user)
+
+            return res.status(200).json({
+              fileUrl: result.secure_url,
+              cloudinaryUrl: result.secure_url,
+              thumbnailUrl:
+                'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612',
+            })
+          })
+          .end(req.file.buffer)
+
+        return
       }
 
       return res.status(400).json({ error: 'URL ou arquivo não fornecido' })
     } catch (e) {
-      console.log(e)
+      console.error(
+        '[ERRO AO FAZER DOWNLOAD]:',
+        e.response?.data || e.message || e,
+      )
       return res.status(500).json({ error: 'Erro interno no servidor' })
     }
   }
