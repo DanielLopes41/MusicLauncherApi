@@ -6,7 +6,10 @@ export class MusicController {
   async download(req, res) {
     try {
       const { url } = req.body
-
+      const user = await User.findByPk(req.userId)
+      if (!user) {
+        return res.status(401).json({})
+      }
       if (url) {
         const response = await axios.get('https://www.tikwm.com/api/', {
           params: { url },
@@ -20,14 +23,14 @@ export class MusicController {
             .json({ error: 'Não foi possível obter o vídeo do TikTok' })
         }
 
-        await Music.create({
+        const newMusic = await Music.create({
           title: `music_${Math.floor(Math.random() * 1000000)}`,
           fileUrl: videoUrl,
           cloudinaryUrl: videoUrl,
           thumbnailUrl:
             'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612',
         })
-
+        await newMusic.addUser(user)
         return res.status(200).send({
           fileUrl: '',
           cloudinaryUrl: videoUrl,
@@ -35,8 +38,6 @@ export class MusicController {
             'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612',
         })
       } else if (req.file) {
-        const user = await User.findByPk(req.userId)
-
         cloudinary.uploader
           .upload_stream({ resource_type: 'auto' }, async (error, result) => {
             if (error) {
