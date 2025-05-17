@@ -2,57 +2,34 @@ import Music from '../models/Music.js'
 import User from '../models/User.js'
 import axios from 'axios'
 import cloudinary from '../config/cloudinary.js'
-import { TTScraper } from 'tiktok-scraper-ts'
 export class MusicController {
   async download(req, res) {
     try {
       const rawUrl = req.body.url
-
-      if (!rawUrl && !req.file) {
-        return res.status(400).json({ error: 'URL ou arquivo não fornecido' })
-      }
-
+      const cleanedUrl = rawUrl.replace(/\?.*$/, '')
       const user = await User.findByPk(req.userId)
       if (!user) {
-        return res.status(401).json({ error: 'Usuário não autorizado' })
+        return res.status(401).json({})
       }
-
-      if (rawUrl) {
-        const cleanedUrl = rawUrl.replace(/\?.*$/, '')
-        const TikTokScraper = new TTScraper()
-        const videoInfo = await TikTokScraper.video(cleanedUrl, true)
-        console.log('videoInfo:', videoInfo)
-
-        if (!videoInfo || !videoInfo.downloadURL) {
-          return res
-            .status(500)
-            .json({ error: 'Falha ao obter info do vídeo via TTScraper' })
-        }
-
+      if (cleanedUrl) {
         const response = await axios.get('https://www.tikwm.com/api/', {
           params: { url: cleanedUrl },
         })
-        console.log('response.data:', response.data)
-
         const videoUrl = response?.data?.data?.play
-        if (!videoUrl || typeof videoUrl !== 'string') {
+
+        if (!videoUrl) {
           return res
             .status(500)
-            .json({ error: 'Não foi possível obter o vídeo do TikTok (tikwm)' })
+            .json({ error: 'Não foi possível obter o vídeo do TikTok' })
         }
-
         const newMusic = await Music.create({
-          title:
-            videoInfo.description ||
-            `music_${Math.floor(Math.random() * 1000000)}`,
-          fileUrl: videoInfo.downloadURL,
-          cloudinaryUrl: videoInfo.downloadURL,
+          title: `music_${Math.floor(Math.random() * 1000000)}`,
+          fileUrl: videoUrl,
+          cloudinaryUrl: videoUrl,
           thumbnailUrl:
-            videoInfo.cover ||
             'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
         })
         await newMusic.addUser(user)
-
         return res.status(200).send({
           fileUrl: videoUrl,
           cloudinaryUrl: videoUrl,
@@ -88,7 +65,11 @@ export class MusicController {
             })
           })
           .end(req.file.buffer)
+
+        return
       }
+
+      return res.status(400).json({ error: 'URL ou arquivo não fornecido' })
     } catch (e) {
       console.error(
         '[ERRO AO FAZER DOWNLOAD]:',
