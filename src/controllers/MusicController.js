@@ -30,8 +30,8 @@ export class MusicController {
           title:
             videoInfo.description ||
             `music_${Math.floor(Math.random() * 1000000)}`,
-          fileUrl: videoInfo.downloadURL,
-          cloudinaryUrl: videoInfo.downloadURL,
+          fileUrl: videoUrl,
+          cloudinaryUrl: videoUrl,
           thumbnailUrl:
             videoInfo.cover ||
             'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
