@@ -1,8 +1,8 @@
 import Music from '../models/Music.js'
 import User from '../models/User.js'
-import { getVideoMeta } from 'tiktok-scraper-ts'
 import axios from 'axios'
 import cloudinary from '../config/cloudinary.js'
+import { TTScraper } from 'tiktok-scraper-ts'
 export class MusicController {
   async download(req, res) {
     try {
@@ -13,6 +13,8 @@ export class MusicController {
         return res.status(401).json({})
       }
       if (cleanedUrl) {
+        const TikTokScraper = new TTScraper()
+        const videoInfo = await TikTokScraper.video(cleanedUrl, true)
         const response = await axios.get('https://www.tikwm.com/api/', {
           params: { url: cleanedUrl },
         })
@@ -24,14 +26,14 @@ export class MusicController {
             .json({ error: 'Não foi possível obter o vídeo do TikTok' })
         }
 
-        const videoMeta = await getVideoMeta(cleanedUrl)
         const newMusic = await Music.create({
           title:
-            videoMeta.text || `music_${Math.floor(Math.random() * 1000000)}`,
-          fileUrl: videoUrl,
-          cloudinaryUrl: videoUrl,
+            videoInfo.description ||
+            `music_${Math.floor(Math.random() * 1000000)}`,
+          fileUrl: videoInfo.downloadURL,
+          cloudinaryUrl: videoInfo.downloadURL,
           thumbnailUrl:
-            videoMeta.covers.default ||
+            videoInfo.cover ||
             'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
         })
         await newMusic.addUser(user)
