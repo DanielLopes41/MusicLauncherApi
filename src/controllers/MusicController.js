@@ -14,12 +14,19 @@ export class MusicController {
 
         const videoUrl = response?.data?.data?.play
 
-        // Verificação correta da estrutura do response
         if (!videoUrl) {
           return res
             .status(500)
             .json({ error: 'Não foi possível obter o vídeo do TikTok' })
         }
+
+        await Music.create({
+          title: `music_${Math.floor(Math.random() * 1000000)}`,
+          fileUrl: videoUrl,
+          cloudinaryUrl: videoUrl,
+          thumbnailUrl:
+            'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612',
+        })
 
         return res.status(200).send({
           fileUrl: '',
