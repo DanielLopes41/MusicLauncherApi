@@ -5,16 +5,16 @@ import cloudinary from '../config/cloudinary.js'
 export class MusicController {
   async download(req, res) {
     try {
-      const { url } = req.body
+      const rawUrl = req.body.url
+      const cleanedUrl = rawUrl.replace(/\?.*$/, '')
       const user = await User.findByPk(req.userId)
       if (!user) {
         return res.status(401).json({})
       }
-      if (url) {
+      if (cleanedUrl) {
         const response = await axios.get('https://www.tikwm.com/api/', {
-          params: { url },
+          params: { url: cleanedUrl },
         })
-
         const videoUrl = response?.data?.data?.play
 
         if (!videoUrl) {
@@ -32,7 +32,7 @@ export class MusicController {
         })
         await newMusic.addUser(user)
         return res.status(200).send({
-          fileUrl: '',
+          fileUrl: videoUrl,
           cloudinaryUrl: videoUrl,
           thumbnailUrl:
             'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612',
