@@ -1,5 +1,6 @@
 import Music from '../models/Music.js'
 import User from '../models/User.js'
+import { getVideoMeta } from 'tiktok-scraper-ts'
 import axios from 'axios'
 import cloudinary from '../config/cloudinary.js'
 export class MusicController {
@@ -23,11 +24,14 @@ export class MusicController {
             .json({ error: 'Não foi possível obter o vídeo do TikTok' })
         }
 
+        const videoMeta = await getVideoMeta(cleanedUrl)
         const newMusic = await Music.create({
-          title: `music_${Math.floor(Math.random() * 1000000)}`,
+          title:
+            videoMeta.text || `music_${Math.floor(Math.random() * 1000000)}`,
           fileUrl: videoUrl,
           cloudinaryUrl: videoUrl,
           thumbnailUrl:
+            videoMeta.covers.default ||
             'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
         })
         await newMusic.addUser(user)
