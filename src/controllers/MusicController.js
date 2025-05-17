@@ -28,7 +28,7 @@ export class MusicController {
           fileUrl: videoUrl,
           cloudinaryUrl: videoUrl,
           thumbnailUrl:
-            'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612',
+            'https://media.istockphoto.com/id/1215540461/pt/vetorial/3d-headphones-on-sound-wave-background-colorful-abstract-visualization-of-digital-sound.jpg?s=612x612&w=0&k=20&c=22_trFnbPHR7OsBHgGa-spwJXedysy4etXcIKerJjsw=',
         })
         await newMusic.addUser(user)
         return res.status(200).send({
