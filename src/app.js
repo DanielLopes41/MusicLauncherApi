@@ -1,9 +1,9 @@
-import user from './src/routes/user.js'
-import token from './src/routes/token.js'
-import music from './src/routes/music.js'
+import user from './routes/user.js'
+import token from './routes/token.js'
+import music from './routes/music.js'
 import express from 'express'
 import cors from 'cors'
-import './src/database/index.js'
+import './database/index.js'
 export class App {
   constructor() {
     this.app = express()
